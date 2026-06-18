@@ -1,0 +1,30 @@
+name: Daily Study Log
+
+on:
+  schedule:
+    - cron: "30 14 * * *"   # 매일 23:30 KST
+  workflow_dispatch:         # 테스트용 수동 실행 버튼
+
+permissions:
+  contents: write
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/update_log.py
+      - name: Commit if studied
+        run: |
+          git config user.name "Subin9227"
+          git config user.email "sstudy9227@naver.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "study log: $(date +'%Y-%m-%d') (auto)"
+            git push
+          else
+            echo "Nothing to commit."
+          fi
