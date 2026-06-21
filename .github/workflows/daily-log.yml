@@ -1,7 +1,8 @@
 name: Daily Study Log
 on:
   schedule:
-    - cron: "30 14 * * *"   # 매일 23:30 KST
+    - cron: "0 14 * * *"   # 23:00 KST — 그날 잔디 확정
+    - cron: "0 21 * * *"   # 06:00 KST 다음날 — 전날 최종 시간 백필
   workflow_dispatch:
 permissions:
   contents: write
@@ -13,7 +14,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Generate today's log
+      - name: Generate log
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -24,7 +25,7 @@ jobs:
           git config user.email "sstudy9227@naver.com"
           if [ -n "$(git status --porcelain)" ]; then
             git add .
-            git commit -m "study log: $(date +'%Y-%m-%d') (auto)"
+            git commit -m "study log (auto)"
             git push
           else
             echo "Nothing to commit."
