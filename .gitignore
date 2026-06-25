@@ -1,2 +1,9 @@
 .DS_Store
 CONTEXT.md
+
+# Python 가상환경/캐시 (커밋 금지)
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
