@@ -1,8 +1,8 @@
 name: Daily Study Log
 on:
   schedule:
-    - cron: "0 14 * * *"   # 23:00 KST — 그날 잔디 확정
-    - cron: "0 21 * * *"   # 06:00 KST 다음날 — 전날 최종 시간 백필
+    - cron: "17 14 * * *"   # 23:17 KST — 그날 잔디 확정 (정각 피해 누락 방지)
+    - cron: "23 21 * * *"   # 06:23 KST 다음날 — 전날 최종 시간 백필
   workflow_dispatch:
 permissions:
   contents: write
@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -26,7 +28,11 @@ jobs:
           if [ -n "$(git status --porcelain)" ]; then
             git add .
             git commit -m "study log (auto)"
-            git push
+            # 원격이 먼저 바뀌어도(non-fast-forward) 안전하게: rebase 후 push, 최대 3회 재시도
+            for i in 1 2 3; do
+              git pull --rebase origin main && git push origin HEAD:main && break
+              echo "push attempt $i failed, retrying..."; sleep 5
+            done
           else
             echo "Nothing to commit."
           fi

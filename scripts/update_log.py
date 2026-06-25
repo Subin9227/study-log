@@ -1,4 +1,5 @@
 import os, json, datetime, urllib.request
+import calendar as _cal
 import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
 
@@ -11,6 +12,12 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 BOOTCAMP_CATEGORY = "부트캠프"
 SLOT_MINUTES = 10
 BOOTCAMP_MIN_HOURS = 2.0   # ← 기준: 부트캠프 N시간 이상이면 '공부한 날'
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+CALENDAR_JSON = os.path.join(HERE, "calendar.json")   # 달력 단일 출처(일자별 전체/부트캠프)
+README_PATH = os.path.join(os.path.dirname(HERE), "README.md")
+CAL_START = "<!-- CAL:START -->"
+CAL_END = "<!-- CAL:END -->"
 
 def target_date():
     now = datetime.datetime.now(KST)
@@ -53,6 +60,12 @@ def bootcamp_hours(data):
     count = sum(1 for s in slots.values() if (s or {}).get("categoryName") == BOOTCAMP_CATEGORY)
     return round(count * SLOT_MINUTES / 60, 1)
 
+def total_minutes(data):
+    # 카테고리가 찍힌 모든 슬롯 = 하루 전체 공부시간(분). 달력의 큰 숫자(예 10:53)용.
+    slots = (data or {}).get("slots") or {}
+    count = sum(1 for s in slots.values() if (s or {}).get("categoryName"))
+    return count * SLOT_MINUTES
+
 def task_lines(data):
     data = data or {}
     cat_name = {c.get("id"): c.get("name", "") for c in (data.get("categories") or [])}
@@ -66,6 +79,91 @@ def task_lines(data):
         lines.append(f"- [{box}] {t.get('title', '')}")
     lines.append("")
     return lines
+
+# ───────────────────────── 달력 ─────────────────────────
+def load_calendar():
+    try:
+        with open(CALENDAR_JSON, encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, ValueError):
+        return {}
+
+def save_calendar(cal):
+    with open(CALENDAR_JSON, "w", encoding="utf-8") as f:
+        json.dump(cal, f, ensure_ascii=False, indent=2, sort_keys=True)
+        f.write("\n")
+
+def _hhmm(total_min):
+    return f"{total_min // 60:02d}:{total_min % 60:02d}"
+
+def _emoji(total_min):
+    h = total_min / 60
+    if h >= 8: return "🟫"
+    if h >= 5: return "🟥"
+    if h >= 2: return "🟧"
+    if h > 0:  return "🟨"
+    return ""
+
+def render_calendar(cal):
+    # cal: { "YYYY-MM-DD": {"total_min": int, "bootcamp_h": float} }
+    if not cal:
+        return "_아직 기록이 없습니다._"
+    months = {}
+    for ds, v in cal.items():
+        months.setdefault(ds[:7], {})[ds] = v
+    out = []
+    for ym in sorted(months, reverse=True):   # 최신 달이 위로
+        year, month = int(ym[:4]), int(ym[5:7])
+        entries = months[ym]
+        total_sum = sum(v["total_min"] for v in entries.values())
+        peak_ds = max(entries, key=lambda d: entries[d]["total_min"])
+        peak = entries[peak_ds]["total_min"]
+        out.append(f"### 📅 {ym}")
+        out.append(
+            f"`{total_sum // 60}시간 {total_sum % 60}분` · "
+            f"공부한 날 **{len(entries)}일** · 최장 **{_hhmm(peak)}** ({int(peak_ds[8:])}일)"
+        )
+        out.append("")
+        out.append("| 월 | 화 | 수 | 목 | 금 | 토 | 일 |")
+        out.append("|---|---|---|---|---|---|---|")
+        for week in _cal.Calendar(firstweekday=0).monthdatescalendar(year, month):
+            cells = []
+            for d in week:
+                if d.month != month:
+                    cells.append(" ")
+                    continue
+                ds = d.isoformat()
+                if ds in entries:
+                    tm = entries[ds]["total_min"]
+                    bc = entries[ds].get("bootcamp_h") or 0
+                    if tm > 0:
+                        cell = f"**{d.day}**<br>{_emoji(tm)} {_hhmm(tm)}"
+                        if bc:
+                            cell += f"<br><sub>부트 {bc}h</sub>"
+                    else:
+                        cell = f"**{d.day}**<br>✍️"   # 측정시간 0(블로그 등)
+                    cells.append(cell)
+                else:
+                    cells.append(str(d.day))
+            out.append("| " + " | ".join(cells) + " |")
+        out.append("")
+    return "\n".join(out).rstrip()
+
+def update_readme(cal):
+    block = f"{CAL_START}\n{render_calendar(cal)}\n{CAL_END}"
+    try:
+        with open(README_PATH, encoding="utf-8") as f:
+            txt = f.read()
+    except FileNotFoundError:
+        txt = "# Study Log\n"
+    if CAL_START in txt and CAL_END in txt:
+        head, rest = txt.split(CAL_START, 1)
+        _, tail = rest.split(CAL_END, 1)
+        txt = head + block + tail
+    else:   # 마커 없으면 달력 섹션을 새로 붙임
+        txt = txt.rstrip() + "\n\n## 📊 공부 달력\n" + block + "\n"
+    with open(README_PATH, "w", encoding="utf-8") as f:
+        f.write(txt)
 
 def main():
     day = target_date()
@@ -82,11 +180,17 @@ def main():
         lines.append("## 블로그")
         lines += [f"- [{p['title']}]({p['link']})" for p in posts]
         lines.append("")
-    path = os.path.join(f"{day:%Y}", f"{day:%m}", f"{day}.md")
+    path = os.path.join("logs", f"{day:%Y}", f"{day:%m}", f"{day}.md")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
-    print(f"Wrote {path} (blog={len(posts)}, bootcamp={bc}h).")
+    # 달력 갱신: 그날 칸에 전체시간 + 부트캠프 시간 기록 후 README 주입
+    tm = total_minutes(data)
+    cal = load_calendar()
+    cal[str(day)] = {"total_min": tm, "bootcamp_h": bc}
+    save_calendar(cal)
+    update_readme(cal)
+    print(f"Wrote {path} (blog={len(posts)}, bootcamp={bc}h, total={_hhmm(tm)}).")
 
 if __name__ == "__main__":
     main()
