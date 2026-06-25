@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CNN 구조 신경망 시각화 (수정본)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { color: #2c3e50; margin-bottom: 5px; }
+        p { color: #7f8c8d; margin-top: 0; margin-bottom: 25px; }
+        
+        .control-panel {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 20px;
+            align-items: flex-end;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .input-group label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        .input-group input {
+            padding: 6px 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 13px;
+            width: 80px;
+            outline: none;
+        }
+        button {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #27ae60; }
+
+        .canvas-container {
+            position: relative;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🧠 CNN 파이프라인 노드 시각화</h1>
+    <p>글자 겹침 현상을 수정했습니다. 숫자를 바꾸면 실시간으로 완벽하게 연산됩니다.</p>
+
+    <div class="control-panel">
+        <div class="input-group">
+            <label for="batchSize">배치 사이즈</label>
+            <input type="number" id="batchSize" value="32">
+        </div>
+        <div class="input-group">
+            <label for="imageSize">이미지 크기</label>
+            <input type="number" id="imageSize" value="16">
+        </div>
+        <div class="input-group">
+            <label for="numClasses">클래스 개수</label>
+            <input type="number" id="numClasses" value="6">
+        </div>
+        <button onclick="drawNetwork()">시각화 업데이트</button>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="networkCanvas" width="1150" height="620"></canvas>
+    </div>
+
+    <script>
+        function drawNetwork() {
+            const canvas = document.getElementById('networkCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const B = parseInt(document.getElementById('batchSize').value) || 32;
+            const size = parseInt(document.getElementById('imageSize').value) || 16;
+            const C = parseInt(document.getElementById('numClasses').value) || 6;
+
+            const s1 = Math.floor(size / 2);
+            const s2 = Math.floor(s1 / 2);
+            const s3 = Math.floor(s2 / 2);
+            const flattenSize = 128 * s3 * s3;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const layers = [
+                { name: "입력층", sub: "(Input)", shape: `[${B}, 3, ${size}, ${size}]`, nodes: 3, color: "#9b59b6" },
+                { name: "은닉층", sub: "(Conv1+Pool1)", shape: `[${B}, 32, ${s1}, ${s1}]`, nodes: 4, color: "#2ecc71" },
+                { name: "은닉층", sub: "(Conv2+Pool2)", shape: `[${B}, 64, ${s2}, ${s2}]`, nodes: 4, color: "#2ecc71" },
+                { name: "은닉층", sub: "(Conv3+Pool3)", shape: `[${B}, 128, ${s3}, ${s3}]`, nodes: 4, color: "#2ecc71" },
+                { name: "은닉층", sub: "(Flatten)", shape: `[${B}, ${flattenSize}]`, nodes: 3, color: "#e74c3c" },
+                { name: "은닉층", sub: "(FC1)", shape: `[${B}, 256]`, nodes: 3, color: "#f1c40f" },
+                { name: "출력층", sub: "(FC2/Output)", shape: `[${B}, ${C}]`, nodes: 2, color: "#e67e22" }
+            ];
+
+            const layerSpacing = canvas.width / (layers.length + 0.2);
+            let layerPositions = [];
+
+            layers.forEach((layer, lIdx) => {
+                const x = layerSpacing * (lIdx + 0.6);
+                const nodePositions = [];
+                
+                const nodeSpacing = 55;
+                const totalHeight = (layer.nodes - 1) * nodeSpacing;
+                const startY = (canvas.height - totalHeight) / 2 + 40;
+
+                for (let nIdx = 0; nIdx < layer.nodes; nIdx++) {
+                    nodePositions.push({ x: x, y: startY + (nIdx * nodeSpacing) });
+                }
+                layerPositions.push(nodePositions);
+
+                // 배경 타원
+                ctx.beginPath();
+                ctx.ellipse(x, canvas.height / 2 + 40, 40, (layer.nodes * 32) + 30, 0, 0, 2 * Math.PI);
+                ctx.fillStyle = layer.color + "1A"; 
+                ctx.fill();
+                ctx.strokeStyle = layer.color + "66"; 
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // 글자 배치 수정 (줄바꿈 처리로 겹침 방지)
+                ctx.fillStyle = "#2c3e50";
+                ctx.font = "bold 13px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(layer.name, x, 35);
+                ctx.font = "11px sans-serif";
+                ctx.fillText(layer.sub, x, 52);
+                
+                ctx.font = "bold 11px monospace";
+                ctx.fillStyle = "#e67e22";
+                ctx.fillText(layer.shape, x, 72);
+            });
+
+            // 연결선 그리기
+            for (let lIdx = 0; lIdx < layerPositions.length - 1; lIdx++) {
+                const currentLayer = layerPositions[lIdx];
+                const nextLayer = layerPositions[lIdx + 1];
+                ctx.lineWidth = 1;
+                currentLayer.forEach(currNode => {
+                    nextLayer.forEach(nextNode => {
+                        ctx.beginPath();
+                        ctx.moveTo(currNode.x, currNode.y);
+                        ctx.lineTo(nextNode.x, nextNode.y);
+                        ctx.strokeStyle = "rgba(189, 195, 199, 0.35)"; 
+                        ctx.stroke();
+                    });
+                });
+            }
+
+            // 노드 그리기
+            layerPositions.forEach((nodes, lIdx) => {
+                const layerColor = layers[lIdx].color;
+                nodes.forEach(node => {
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, 14, 0, 2 * Math.PI);
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fill();
+                    ctx.strokeStyle = layerColor;
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                });
+            });
+
+            // 하단 주석 구조
+            ctx.fillStyle = "#2c3e50";
+            ctx.font = "bold 13px sans-serif";
+            ctx.textAlign = "center";
+            
+            ctx.fillText("↑\n입력층(Input)", layerSpacing * 0.6, canvas.height - 55);
+
+            const hiddenStartX = layerSpacing * 1.6 - 15;
+            const hiddenEndX = layerSpacing * 5.6 + 15;
+            ctx.beginPath();
+            ctx.moveTo(hiddenStartX, canvas.height - 60);
+            ctx.lineTo(hiddenStartX, canvas.height - 50);
+            ctx.lineTo(hiddenEndX, canvas.height - 50);
+            ctx.lineTo(hiddenEndX, canvas.height - 60);
+            ctx.strokeStyle = "#7f8c8d";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillText("Hidden Layer (은닉층 영역)", (hiddenStartX + hiddenEndX) / 2, canvas.height - 30);
+
+            ctx.fillText("↑\n출력층(Output)", layerSpacing * 6.6, canvas.height - 55);
+        }
+
+        window.onload = drawNetwork;
+    </script>
+</body>
+</html>
