@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: social_network
+Version: 0.1.0
+Summary: week2 FastAPI 과제
+Requires-Python: >=3.9
+Requires-Dist: fastapi>=0.115
+Requires-Dist: uvicorn[standard]>=0.27

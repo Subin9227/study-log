@@ -1,0 +1,12 @@
+[
+    {
+        "id": 2,
+        "content": "week2 note",
+        "done": false
+    },
+    {
+        "id": 3,
+        "content": "연습하기",
+        "done": false
+    }
+]
