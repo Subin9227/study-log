@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CNN Full Pipeline 시각화</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { color: #2c3e50; margin-bottom: 5px; font-size: 28px; }
+        p { color: #7f8c8d; margin-top: 0; margin-bottom: 20px; }
+        
+        /* 컨트롤러 패널 */
+        .control-panel {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 20px;
+            align-items: flex-end;
+            margin-bottom: 15px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .input-group label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        .input-group input {
+            padding: 6px 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 13px;
+            width: 80px;
+            outline: none;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #2980b9; }
+
+        /* 캔버스 */
+        .canvas-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎬 CNN Full Pipeline 시각화 툴</h1>
+    <p>RGB 채널, Feature Maps 입체 구조, 데이터셋 크기(1000개/200개)를 모두 포함한 진짜 CNN 지도입니다.</p>
+
+    <div class="control-panel">
+        <div class="input-group">
+            <label for="batchSize">배치 사이즈(B)</label>
+            <input type="number" id="batchSize" value="64">
+        </div>
+        <div class="input-group">
+            <label for="imageSize">이미지 크기</label>
+            <input type="number" id="imageSize" value="32">
+        </div>
+        <div class="input-group">
+            <label for="numClasses">클래스 개수</label>
+            <input type="number" id="numClasses" value="10">
+        </div>
+        <button onclick="drawPipeline()">시각화 업데이트</button>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="pipelineCanvas" width="1300" height="650"></canvas>
+    </div>
+
+    <script>
+        function drawPipeline() {
+            const canvas = document.getElementById('pipelineCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 입력값 변수화
+            const B = parseInt(document.getElementById('batchSize').value) || 64;
+            const size = parseInt(document.getElementById('imageSize').value) || 32;
+            const C = parseInt(document.getElementById('numClasses').value) || 10;
+
+            // 실시간 차원 계산 (Feature Map Sizes)
+            const s1 = Math.floor(size / 2);
+            const s2 = Math.floor(s1 / 2);
+            const s3 = Math.floor(s2 / 2);
+            const flattenSize = 128 * s3 * s3;
+
+            // 화면 초기화
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // ==========================================
+            // 1. 상단 데이터셋 정보 텍스트 표기 (1000개, 200개 데이터 요구사항)
+            // ==========================================
+            ctx.fillStyle = "#2c3e50";
+            ctx.font = "bold 13px sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(`📊 전체 데이터셋 구조:`, 30, 40);
+            ctx.font = "13px monospace";
+            ctx.fillStyle = "#27ae60";
+            ctx.fillText(`• 학습 데이터 (x_train / y_train): 총 1,000장 ➔ Shape: [1000, 3, ${size}, ${size}] / [1000]`, 40, 65);
+            ctx.fillStyle = "#e67e22";
+            ctx.fillText(`• 평가 데이터 (x_test / y_test):   총   200장 ➔ Shape: [200, 3, ${size}, ${size}] / [200]`, 40, 85);
+            ctx.fillStyle = "#2980b9";
+            ctx.fillText(`• 미니배치 데이터 로더 (DataLoader): 현재 한 번에 ${B}장씩 쪼개서 배달 중!`, 40, 105);
+
+            // 구분을 위한 중앙 가이드선 배경
+            ctx.strokeStyle = "#e2e8f0";
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, 130); ctx.lineTo(canvas.width, 130); ctx.stroke();
+
+            // ==========================================
+            // 2. 파이프라인 입체 맵 그리기 함수
+            // ==========================================
+            
+            // 이미지 사각형(Feature Map)을 3D 비스듬하게 그리는 헬퍼 함수
+            function drawIsometricRect(x, y, size, depth, color, label) {
+                ctx.save();
+                ctx.lineWidth = 1.5;
+                
+                // 뒤에서부터 레이어 겹쳐 그리기 (Depth 효과)
+                for (let i = depth - 1; i >= 0; i--) {
+                    const offset = i * 3; // 겹치는 간격
+                    ctx.beginPath();
+                    // 비스듬한 사각형 좌표 설정
+                    ctx.moveTo(x + offset, y - offset);
+                    ctx.lineTo(x + size + offset, y - offset);
+                    ctx.lineTo(x + size - 5 + offset, y + size - offset);
+                    ctx.lineTo(x - 5 + offset, y + size - offset);
+                    ctx.closePath();
+                    
+                    if (i === 0) {
+                        ctx.fillStyle = color; // 맨 앞 이미지는 선명하게
+                        ctx.strokeStyle = "#2c3e50";
+                    } else {
+                        ctx.fillStyle = color + "22"; // 뒤 레이어들은 투명하게
+                        ctx.strokeStyle = color + "55";
+                    }
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                
+                if (label) {
+                    ctx.fillStyle = "#2c3e50";
+                    ctx.font = "bold 11px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText(label, x + size/2, y + size + 20);
+                }
+                ctx.restore();
+            }
+
+            // --- LAYER 1: Input (RGB 3채널 분리 표현) ---
+            const l1X = 60, l1Y = 320;
+            ctx.fillStyle = "#9b59b6"; ctx.font = "bold 14px sans-serif"; ctx.textAlign = "left";
+            ctx.fillText("Input (입력 이미지)", l1X, l1Y - 70);
+            ctx.font = "bold 12px monospace"; ctx.fillStyle = "#e74c3c";
+            ctx.fillText(`Shape: [${B}, 3, ${size}, ${size}]`, l1X, l1Y - 50);
+            
+            // RGB 채널 3장 겹쳐 그리기
+            drawIsometricRect(l1X + 40, l1Y, 60, 3, "#3498db", "RGB 3Channels");
+            // 칼라강조 텍스트
+            ctx.font = "9px sans-serif"; ctx.fillStyle = "#e74c3c"; ctx.fillText("R", l1X+105, l1Y+10);
+            ctx.fillStyle = "#2ecc71"; ctx.fillText("G", l1X+101, l1Y+20);
+            ctx.fillStyle = "#3498db"; ctx.fillText("B", l1X+97, l1Y+30);
+
+            // 커널 커넥션 점선 표현 (그림 참조)
+            ctx.strokeStyle = "#7f8c8d"; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(l1X + 80, l1Y + 30); ctx.lineTo(l1X + 220, l1Y + 20); ctx.stroke();
+            ctx.setLineDash([]); // 점선 해제
+
+            // --- LAYER 2: Conv1 + Pool1 (32 Feature Maps) ---
+            const l2X = 220, l2Y = 330;
+            ctx.fillStyle = "#2ecc71"; ctx.font = "bold 14px sans-serif";
+            ctx.fillText("Conv1 + Pool1", l2X, l2Y - 80);
+            ctx.font = "bold 12px monospace"; ctx.fillStyle = "#e74c3c";
+            ctx.fillText(`[${B}, 32, ${s1}, ${s1}]`, l2X, l2Y - 60);
+            drawIsometricRect(l2X, l2Y, 50, 5, "#2ecc71", "32 f.maps");
+
+            // --- LAYER 3: Conv2 + Pool2 (64 Feature Maps) ---
+            const l3X = 390, l3Y = 340;
+            ctx.fillStyle = "#2ecc71"; ctx.font = "bold 14px sans-serif";
+            ctx.fillText("Conv2 + Pool2", l3X, l3Y - 90);
+            ctx.font = "bold 12px monospace"; ctx.fillStyle = "#e74c3c";
+            ctx.fillText(`[${B}, 64, ${s2}, ${s2}]`, l3X, l3Y - 70);
+            drawIsometricRect(l3X, l3Y, 40, 7, "#2ecc71", "64 f.maps");
+
+            // --- LAYER 4: Conv3 + Pool3 (128 Feature Maps) ---
+            const l4X = 560, l4Y = 345;
+            ctx.fillStyle = "#2ecc71"; ctx.font = "bold 14px sans-serif";
+            ctx.fillText("Conv3 + Pool3", l4X, l4Y - 95);
+            ctx.font = "bold 12px monospace"; ctx.fillStyle = "#e74c3c";
+            ctx.fillText(`[${B}, 128, ${s3}, ${s3}]`, l4X, l4Y - 75);
+            drawIsometricRect(l4X, l4Y, 30, 10, "#2ecc71", "128 f.maps");
+
+            // 점선 연결 (Fully Connected로 진입)
+            ctx.strokeStyle = "#7f8c8d"; ctx.setLineDash([3, 3]);
+            ctx.beginPath(); ctx.moveTo(l4X + 50, l4Y + 15); ctx.lineTo(740, 240); ctx.stroke();
+            ctx.setLineDash([]);
+
+            // --- LAYER 5: Flatten (평탄화 세로 기둥 바) ---
+            const l5X = 740, l5Y = 220;
+            ctx.fillStyle = "#e74c3c"; ctx.font = "bold 14px sans-serif";
+            ctx.fillText("Flatten", l5X - 10, l5Y - 45);
+            ctx.font = "bold 12px monospace"; ctx.fillStyle = "#e74c3c";
+            ctx.fillText(`[${B}, ${flattenSize}]`, l5X - 10, l5Y - 25);
+            
+            // 세로 기둥 모양 묘사
+            ctx.fillStyle = "#e74c3c"; ctx.strokeStyle = "#2c3e50"; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.rect(l5X, l5Y, 15, 260); ctx.fill(); ctx.stroke();
+            // 기둥 내부 격자 무늬
+            ctx.strokeStyle = "#ffffff55";
+            for(let h=20; h<260; h+=20) {
+                ctx.beginPath(); ctx.moveTo(l5X, l5Y+h); ctx.lineTo(l5X+15, l5Y+h); ctx.stroke();
+            }
+
+            // --- LAYER 6: FC1 (Fully Connected 밀집노드) ---
+            const l6X = 900, l6Y = 250;
+            ctx.fillStyle = "#f1c40f"; ctx.font = "bold 14px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("FC1 Layer", l6X, l6Y - 75);
+            ctx.font = "bold 12px monospace"; ctx.fillStyle = "#e74c3c";
+            ctx.fillText(`[${B}, 256]`, l6X, l6Y - 55);
+
+            const fc1Nodes = [l6Y, l6Y+40, l6Y+80, l6Y+120, l6Y+160, l6Y+200];
+            
+            // Flatten 기둥과 FC1 노드 간의 빽빽한 거미줄 전파선 그리기
+            ctx.strokeStyle = "rgba(189, 195, 199, 0.25)"; ctx.lineWidth = 1;
+            for(let h=10; h<260; h+=30) {
+                fc1Nodes.forEach(ny => {
+                    ctx.beginPath(); ctx.moveTo(l5X + 15, l5Y + h); ctx.lineTo(l6X - 12, ny); ctx.stroke();
+                });
+            }
+
+            // --- LAYER 7: Output (최종 출력 클래스 분포) ---
+            const l7X = 1100, l7Y = 310;
+            ctx.fillStyle = "#e67e22"; ctx.font = "bold 14px sans-serif";
+            ctx.fillText("Output (FC2)", l7X, l7Y - 135);
+            ctx.font = "bold 12px monospace"; ctx.fillStyle = "#e74c3c";
+            ctx.fillText(`[${B}, ${C}]`, l7X, l7Y - 115);
+
+            const fc2Nodes = [l7Y - 40, l7Y, l7Y + 40];
+
+            // FC1과 FC2 사이 그물망 선 그리기
+            ctx.strokeStyle = "rgba(189, 195, 199, 0.4)";
+            fc1Nodes.forEach(f1y => {
+                fc2Nodes.forEach(f2y => {
+                    ctx.beginPath(); ctx.moveTo(l6X + 12, f1y); ctx.lineTo(l7X - 12, f2y); ctx.stroke();
+                });
+            });
+
+            // 노드 서클 최종 덧칠 (FC1)
+            fc1Nodes.forEach(ny => {
+                ctx.beginPath(); ctx.arc(l6X, ny, 10, 0, 2*Math.PI);
+                ctx.fillStyle = "#ffffff"; ctx.fill();
+                ctx.strokeStyle = "#f1c40f"; ctx.lineWidth = 2.5; ctx.stroke();
+            });
+
+            // 노드 서클 최종 덧칠 (FC2)
+            fc2Nodes.forEach(ny => {
+                ctx.beginPath(); ctx.arc(l7X, ny, 10, 0, 2*Math.PI);
+                ctx.fillStyle = "#ffffff"; ctx.fill();
+                ctx.strokeStyle = "#e67e22"; ctx.lineWidth = 2.5; ctx.stroke();
+            });
+
+            // SoftMax 확률분포 상자 가이드 (그림 2번 형태 재현)
+            ctx.fillStyle = "#ff767522"; ctx.strokeStyle = "#ff7675"; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.rect(l7X + 40, l7Y - 60, 95, 120); ctx.fill(); ctx.stroke();
+            
+            ctx.fillStyle = "#2c3e50"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+            ctx.fillText("SoftMax 확률", l7X + 48, l7Y - 40);
+            ctx.font = "10px monospace"; ctx.fillStyle = "#7f8c8d";
+            ctx.fillText("Class0: 0.1", l7X + 48, l7Y - 15);
+            ctx.font = "bold 10px monospace"; ctx.fillStyle = "#e74c3c";
+            ctx.fillText("Class1: 0.7 ★", l7X + 48, l7Y + 10);
+            ctx.font = "10px monospace"; ctx.fillStyle = "#7f8c8d";
+            ctx.fillText(`Class${C-1}: 0.0...`, l7X + 48, l7Y + 35);
+
+            // ==========================================
+            // 3. 하단 거대 화살표 정보 범주구역 (Feature Extraction vs Classification)
+            // ==========================================
+            ctx.lineWidth = 1.5; ctx.strokeStyle = "#7f8c8d"; ctx.fillStyle = "#7f8c8d";
+            ctx.textAlign = "center"; ctx.font = "bold 13px sans-serif";
+
+            // 구간 1: Feature Extraction
+            ctx.beginPath(); ctx.moveTo(60, 560); ctx.lineTo(650, 560); ctx.stroke();
+            ctx.fillText("◀────── Feature Extraction (특징 추출 구간 - 합성곱/풀링) ──────▶", (60+650)/2, 585);
+
+            // 구간 2: Classification
+            ctx.beginPath(); ctx.moveTo(740, 560); ctx.lineTo(1230, 560); ctx.stroke();
+            ctx.fillText("◀──────── Classification (정답 분류 구간 - 전결합층/소프트맥스) ────────▶", (740+1230)/2, 585);
+        }
+
+        // 초기 실행 촉발
+        window.onload = drawPipeline;
+    </script>
+</body>
+</html>
