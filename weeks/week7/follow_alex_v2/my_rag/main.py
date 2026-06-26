@@ -8,12 +8,11 @@ from rag_chain import build_rag_chain
 
 load_dotenv()
 
-
+# ---- fastapi --------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.rag, _ = build_rag_chain()
     yield
-
 
 app = FastAPI(lifespan = lifespan)
 

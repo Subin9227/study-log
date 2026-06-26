@@ -11,7 +11,7 @@ load_dotenv()
 print("============= ⭐️ llm 호출하기 =============")
 rag, llm = build_rag_chain()                            # 파이프라인 조립 : rag_chain.py로 가서 조립
 
-print(rag.invoke("while은 언제 사용하나요?"))               # invoke를 하며 google에 질문 보내기
+print(rag.invoke("while은 언제 사용하나요?"))               # invoke를 하며 ollama에 질문 보내기
 
 
 # ---- 3. 평가 --------------------------------------------------------
@@ -100,6 +100,6 @@ result = evaluate(
     target,
     data = DATASET_NAME,
     evaluators =[contains_expected_keyword, llm_judge],
-    experiment_prefix = "v1-baseline",
+    experiment_prefix = "v2-baseline",
 )
 print(result)
