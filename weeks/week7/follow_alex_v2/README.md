@@ -15,10 +15,11 @@ rm -rf chroma_db        # chromadb 삭제
 uv run baseline.py      # 실행
 ```
 
-### 2. ollama 로 모델 변경 (선택사항)
+### 2. ollama 로 실행과 판단 모델 변경 (선택사항)
 *  gemini-2.5-flash로 진행하던 중 api 최대한도로 인해 429 에러 발생.
 *  평가 질문이 3개 이므로, judge 진행 시 rag 호출 3번 + llm_judge 3번 = 최소 6번 이상 호출되기 때문.
 *  .env와 rag_chain.py에서 ollama로 변경. (gemini 호출을 우선으로 하고, 한도가 막힐 시 ollama로 진행하려 했지만 그것만으로도 1번 호출을 사용하는거기 때문에 아예 변경. 대신 주석으로 처리해뒀다.)
+*  즉, llm과 judge_llm은 별도 분리하지 않고 둘 다 ollama(llama3.2)를 사용. (본인이 본인을 판단, v3에서 분리 예정)
 *  추가로, llama3.2 모델은 임베딩을 지원하지 않아서 rag_chain.py에서 임베딩 시 nomic-embed-text 를 미리 설치하고 사용.
 *  정리
     *  LLM (llama3.2) -> 질문에 답변 생성하는 역할
@@ -31,3 +32,4 @@ uv run baseline.py
 ![follow_alex_v2_chroma_ollama.png](follow_alex_v2_chroma_ollama.png)
 
 ![follow_alex_v2_langsmith.png](follow_alex_v2_langsmith.png)
+*  문제 : 평가가 모두 0으로 나오는 상황
