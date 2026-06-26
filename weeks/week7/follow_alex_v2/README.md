@@ -28,3 +28,4 @@ ollama pull nomic-embed-text
 uv run baseline.py
 ```
 
+![follow_alex_v2_chroma_ollama.png](follow_alex_v2_chroma_ollama.png)
