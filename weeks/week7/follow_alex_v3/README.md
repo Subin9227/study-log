@@ -70,6 +70,6 @@ uv run uvicorn main:app --reload        # fastapi 확인 터미널
 
 | 구분 | 내용 |
 |---|---|
-| 버그 | 같은 문장인데 감정이 매번 바뀜 → `ChatOllama(temperature=0)` 으로 고정 필요 |
-| 버그 | 감정 분류 정확도 낮음 → `contains_expected_keyword` 0.00, `llm_judge` 0.33 평균 |
-| 개선 | `EVAL_QUESTION` 하드코딩 → 별도 파일(CSV/JSON)로 분리 필요 |
+| 버그 | 같은 문장인데 감정이 매번 바뀜 (사진을 보면 같은 문장인데 자신하는, 신이 난 으로 다른 결과가 나옴) <br> → `ChatOllama(temperature=0)` 으로 고정 필요 |
+| 버그 | 감정 분류 정확도 낮음 <br> → `contains_expected_keyword` 0.00 인 상태 & `llm_judge`은 0.33이 평균인 상태 |
+| 개선 | `EVAL_QUESTION` 하드코딩 <br> → 별도 파일(CSV/JSON)로 분리 필요 |
