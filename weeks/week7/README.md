@@ -13,12 +13,12 @@
 
 ## 2. 버전별 변경 사항 요약
 
-| 버전 | 핵심 변경 | 결과 |
-|---|---|---|
-| v1 | 원본 코드 그대로 타이핑하며 코드 분석 + `rag_chain.py`로 LLM 빌드 중복 제거 | 기반 구조 완성 |
-| v2 | ChromaDB 인덱싱 캐싱, Google → Ollama 전환 | 매번 인덱싱 문제 해결, but 평가 0점 |
-| v3 | 감정 60가지 RAG 데이터, 감정 분류 + 공감 챗봇 구현, judge_llm OpenAI 분리 | 파이프라인 완성, but 분류 정확도 낮음 |
-| v4 | 버그 수정, 예시 확충, 임베딩 모델 교체 | contains_keyword 1.00, llm_judge 1.00 달성 |
+| 버전 | README | 핵심 변경 | 결과 |
+|---|---------|---|---|
+| v1 | [v1 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex/README.md) | *  원본 코드 그대로 타이핑하며 코드 분석 <br>*  `rag_chain.py`로 LLM 빌드 중복 제거 | 기반 구조 완성 |
+| v2 | [v2 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex_v2/README.md) | *  ChromaDB 인덱싱 캐싱<br> *  Google → Ollama 전환 | 매번 인덱싱 문제 해결, but 평가 0점 |
+| v3 | [v3 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex_v3/README.md) | *  감정 60가지 RAG 데이터<br> *  감정 분류 + 공감 챗봇 구현<br> *  judge_llm OpenAI 분리 | 파이프라인 완성, but 분류 정확도 낮음 |
+| v4 | [v4 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex_v4/README.md) | *  버그 수정<br> *  예시 확충<br> *  임베딩 모델 교체 | contains_keyword 1.00, llm_judge 1.00 달성 |
 
 <br>
 
