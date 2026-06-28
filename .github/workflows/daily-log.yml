@@ -4,6 +4,21 @@ on:
     - cron: "17 14 * * *"   # 23:17 KST — 그날 잔디 확정 (정각 피해 누락 방지)
     - cron: "23 21 * * *"   # 06:23 KST 다음날 — 전날 최종 시간 백필
   workflow_dispatch:
+    inputs:
+      date_mode:
+        description: "날짜 선택"
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - today
+          - yesterday
+          - manual
+      target_date:
+        description: "manual 선택 시 날짜 입력 (YYYY-MM-DD)"
+        required: false
+        default: ""
 permissions:
   contents: write
 jobs:
@@ -20,6 +35,8 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          DATE_MODE: ${{ github.event.inputs.date_mode || 'auto' }}
+          TARGET_DATE: ${{ github.event.inputs.target_date }}
         run: python scripts/update_log.py
       - name: Commit if studied
         run: |

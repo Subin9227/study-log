@@ -20,8 +20,15 @@ CAL_START = "<!-- CAL:START -->"
 CAL_END = "<!-- CAL:END -->"
 
 def target_date():
+    mode = os.environ.get("DATE_MODE", "auto")
     now = datetime.datetime.now(KST)
-    # 저녁(18시 이후) 실행 → 오늘 / 새벽 실행 → 어제(전날 마무리 백필)
+    if mode == "today":
+        return now.date()
+    if mode == "yesterday":
+        return now.date() - datetime.timedelta(days=1)
+    if mode == "manual":
+        return datetime.date.fromisoformat(os.environ.get("TARGET_DATE", ""))
+    # auto: 저녁(18시 이후) → 오늘 / 새벽·낮 → 어제(전날 백필)
     return now.date() if now.hour >= 18 else now.date() - datetime.timedelta(days=1)
 
 def blog_posts(day):
