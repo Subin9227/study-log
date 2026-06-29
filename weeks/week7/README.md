@@ -13,12 +13,13 @@
 
 ## 2. 버전별 변경 사항 요약
 
-| 버전 | README | 핵심 변경 | 결과 |
-|---|---------|---|---|
-| v1 | [v1 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex/README.md) | *  원본 코드 그대로 타이핑하며 코드 분석 <br>*  `rag_chain.py`로 LLM 빌드 중복 제거 | 기반 구조 완성 |
-| v2 | [v2 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex_v2/README.md) | *  ChromaDB 인덱싱 캐싱<br> *  Google → Ollama 전환 | 매번 인덱싱 문제 해결, but 평가 0점 |
-| v3 | [v3 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex_v3/README.md) | *  감정 60가지 RAG 데이터<br> *  감정 분류 + 공감 챗봇 구현<br> *  judge_llm OpenAI 분리 | 파이프라인 완성, but 분류 정확도 낮음 |
-| v4 | [v4 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex_v4/README.md) | *  버그 수정<br> *  예시 확충<br> *  임베딩 모델 교체 | contains_keyword 1.00, llm_judge 1.00 달성 |
+| 버전 | README | 핵심 변경 | 결과 | 날짜 | 
+|---|---------|---|---|---|
+| v1 | [v1 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex/README.md) | *  원본 코드 그대로 타이핑하며 코드 분석 <br>*  `rag_chain.py`로 LLM 빌드 중복 제거 | 기반 구조 완성 | 6/27 |
+| v2 | [v2 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex_v2/README.md) | *  ChromaDB 인덱싱 캐싱<br> *  Google → Ollama 전환 | 매번 인덱싱 문제 해결, but 평가 0점 | 6/27 |
+| v3 | [v3 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex_v3/README.md) | *  감정 60가지 RAG 데이터<br> *  감정 분류 + 공감 챗봇 구현<br> *  judge_llm OpenAI 분리 | 파이프라인 완성, but 분류 정확도 낮음 | 6/27 |
+| v4 | [v4 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex_v4/README.md) | *  버그 수정<br> *  예시 확충<br> *  임베딩 모델 교체 | contains_keyword 1.00, llm_judge 1.00 달성 | 6/27 |
+| v5 | [v5 README로 바로가기](https://github.com/Subin9227/study-log/blob/main/weeks/week7/follow_alex_v5/README.md) | * Structured Output (Pydantic)<br>* Middleware PII 필터링<br>* 평가 병렬 처리 (max_concurrency) | contains_keyword 1.00, llm_judge 1.00 달성 | 6/29 |
 
 <br>
 
@@ -41,7 +42,7 @@
 "당신은 지금 OOO을 느끼고 있습니다. + 메시지"
 ```
 
-### 3-2. 모델 구성 (최종 v4)
+### 3-2. 모델 구성 (최종 v5)
 | 역할 | 모델 |
 |---|---|
 | 임베딩 | Ollama `bge-m3` |
@@ -49,14 +50,14 @@
 | 평가 judge | OpenAI `gpt-4o-mini` |
 
 
-### 3-3. 파일 구조 (최종 v4)
-| 파일 | 역할 |
-|---|---|
-| `emotion_notes/*.md` | 60가지 감정 데이터 — 감정별 분류/설명/예시 5개 (RAG 검색 대상) |
-| `emotion_map.py` | 감정 코드(E10~E69) ↔ 감정명 매핑, 긍정/부정 집합 정의 |
-| `rag_chain.py` | 인덱싱 캐싱, 감정 분류 체인, 응답 생성 체인, FastAPI용 파이프라인 조립 |
-| `main.py` | FastAPI 서버 — `/query` 엔드포인트로 사용자 입력 받아 응답 반환 |
-| `baseline.py` | LangSmith Dataset 생성 및 평가 실험 (`contains_expected_keyword` + `llm_judge`) |
+### 3-3. 파일 구조 (최종 v5)
+| 파일 | 역할 | 변경 |
+|---|---| ---|
+| `emotion_notes/*.md` | 60가지 감정 데이터 — 감정별 분류/설명/예시 5개 (RAG 검색 대상) | |
+| `emotion_map.py` | 감정 코드(E10~E69) ↔ 감정명 매핑, 긍정/부정 집합 정의 | |
+| `rag_chain.py` | 인덱싱 캐싱, 감정 분류 체인, 응답 생성 체인, FastAPI용 파이프라인 조립 | |
+| `main.py` | FastAPI 서버 — `/query` 엔드포인트, PIIFilterMiddleware로 개인정보 필터링 | v5 |
+| `baseline.py` | LangSmith Dataset 생성 및 평가 실험 (`contains_expected_keyword` + `llm_judge`) | |
 
 
 ### 3-4. 실행 흐름 (FastAPI 기준)
@@ -84,9 +85,9 @@ rag_chain.py - respond_chain.invoke({emotion, valence, question})
     ├── respond_prompt에 {감정명, 긍정/부정, 질문} 주입 
     └── llama3.2가 공감/위로 메시지 생성 
 ↓
-"당신은 지금 만족스러운을 느끼고 있습니다.\n[메시지]" 반환
+EmotionResult(emotion_code, emotion_name, valence, message) 반환
 ↓
-main.py - QueryResponse(answer=...) JSON 응답
+main.py - QueryResponse(emotion_code, emotion_name, valence, message) JSON 응답
 ```
 
 <br>
@@ -116,7 +117,7 @@ main.py - QueryResponse(answer=...) JSON 응답
 
 ## 5. 회고
 
-### 5-1. 과정 서술
+### 5-1. 과정 서술 
 *  5주차 transformer 를 통한, 자체 모델부터 만들면서 감정을 추출하는 걸 만들려고 했으나.. (https://colab.research.google.com/drive/1dZ-4qfrg8yjdZpn68FDt4WXDoMBiVHXa?usp=sharing) 쉽지가 않았다. 사실 꾸준히 해보고 싶었으나 교육 과정 진도는 계속 나가고 새로운 과제는 또 올라오고.. 
 *  결국 우선순위인 "과제 진행"부터 우선으로 하기로 결정. langchain을 어떻게 진행을 해야하나 고민하다 수업시간에 alex가 보여준 데모를 따라해보기로 결정을 했다.
 *  [v1] alex-rag( https://github.com/100-hours-a-week/alex-rag )를 pull 하고, 전체 코드를 그대로 타이핑하며 각 파일과 함수들이 어떻게 상호작용하는지를 우선 파악하였다. 직접 타이핑을 하느라 3시간 걸리고, 오타도 많았지만 오타는 ai가 잘 찾아주어서 금방 고쳤고, 확실히 직접 타이핑을 해서 코드가 머리로 들어오는 느낌이 들었다.
