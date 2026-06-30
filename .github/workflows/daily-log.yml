@@ -15,8 +15,9 @@ on:
           - today
           - yesterday
           - manual
+          - backfill
       target_date:
-        description: "manual 선택 시 날짜 입력 (YYYY-MM-DD)"
+        description: "manual 날짜 / backfill 시작일 (YYYY-MM-DD, 비우면 2026-05-12)"
         required: false
         default: ""
 permissions:
@@ -37,6 +38,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           DATE_MODE: ${{ github.event.inputs.date_mode || 'auto' }}
           TARGET_DATE: ${{ github.event.inputs.target_date }}
+          BACKFILL_START: ${{ github.event.inputs.target_date }}
         run: python scripts/update_log.py
       - name: Commit if studied
         run: |

@@ -19,6 +19,9 @@ README_PATH = os.path.join(os.path.dirname(HERE), "README.md")
 CAL_START = "<!-- CAL:START -->"
 CAL_END = "<!-- CAL:END -->"
 
+DETAIL_FROM = "2026-06-25"     # 이 날짜부터 날짜칸에 시간 표시, 그 전은 숫자만(주간 합계엔 포함)
+BACKFILL_START = "2026-05-12"  # 백필 기본 시작일(부트캠프 개강)
+
 def target_date():
     mode = os.environ.get("DATE_MODE", "auto")
     now = datetime.datetime.now(KST)
@@ -61,6 +64,19 @@ def fetch_day(day):
     except Exception as e:
         print("supabase fetch failed:", e); return None
     return rows[0].get("data") if rows else None
+
+def fetch_range(start, end):
+    # start~end(포함) 모든 날 한 번에 조회. 백필용.
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return []
+    url = f"{SUPABASE_URL}/rest/v1/days?date=gte.{start}&date=lte.{end}&select=date,data"
+    req = urllib.request.Request(url, headers={
+        "apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read())
+    except Exception as e:
+        print("supabase range fetch failed:", e); return []
 
 def bootcamp_hours(data):
     slots = (data or {}).get("slots") or {}
@@ -111,6 +127,13 @@ def _emoji(total_min):
     if h > 0:  return "🟨"
     return ""
 
+def _week_total(week, entries, month):
+    # 한 주(월~일) 행의 합 — 이번 달 날짜만, 컷오프와 무관하게 전부 합산
+    days = [d.isoformat() for d in week if d.month == month and d.isoformat() in entries]
+    tm = sum(entries[ds]["total_min"] for ds in days)
+    bc = sum(entries[ds].get("bootcamp_h") or 0 for ds in days)
+    return tm, round(bc, 1)
+
 def render_calendar(cal):
     # cal: { "YYYY-MM-DD": {"total_min": int, "bootcamp_h": float} }
     if not cal:
@@ -118,21 +141,18 @@ def render_calendar(cal):
     months = {}
     for ds, v in cal.items():
         months.setdefault(ds[:7], {})[ds] = v
+    latest = max(months)   # 최신 달만 펼침(open)
     out = []
-    for ym in sorted(months, reverse=True):   # 최신 달이 위로
+    for ym in sorted(months):   # 오름차순: 과거 → 최신 (위 → 아래로 이어서)
         year, month = int(ym[:4]), int(ym[5:7])
         entries = months[ym]
         total_sum = sum(v["total_min"] for v in entries.values())
-        peak_ds = max(entries, key=lambda d: entries[d]["total_min"])
-        peak = entries[peak_ds]["total_min"]
-        out.append(f"### 📅 {ym}")
-        out.append(
-            f"`{total_sum // 60}시간 {total_sum % 60}분` · "
-            f"공부한 날 **{len(entries)}일** · 최장 **{_hhmm(peak)}** ({int(peak_ds[8:])}일)"
-        )
-        out.append("")
-        out.append("| 월 | 화 | 수 | 목 | 금 | 토 | 일 |")
-        out.append("|---|---|---|---|---|---|---|")
+        open_attr = " open" if ym == latest else ""
+        out.append(f"<details{open_attr}>")
+        out.append(f"<summary>📅 {ym} · {total_sum // 60}시간 {total_sum % 60}분 · 공부 {len(entries)}일</summary>")
+        out.append("")   # <details> 안에서 마크다운 표가 렌더되려면 빈 줄 필요
+        out.append("| 월 | 화 | 수 | 목 | 금 | 토 | 일 | 주간 합계 |")
+        out.append("|---|---|---|---|---|---|---|---|")
         for week in _cal.Calendar(firstweekday=0).monthdatescalendar(year, month):
             cells = []
             for d in week:
@@ -140,7 +160,7 @@ def render_calendar(cal):
                     cells.append(" ")
                     continue
                 ds = d.isoformat()
-                if ds in entries:
+                if ds in entries and ds >= DETAIL_FROM:   # 컷오프 이후만 날짜칸에 시간 표시
                     tm = entries[ds]["total_min"]
                     bc = entries[ds].get("bootcamp_h") or 0
                     if tm > 0:
@@ -151,8 +171,18 @@ def render_calendar(cal):
                         cell = f"**{d.day}**<br>✍️"   # 측정시간 0(블로그 등)
                     cells.append(cell)
                 else:
-                    cells.append(str(d.day))
+                    cells.append(str(d.day))   # 컷오프 이전 or 데이터 없음 → 숫자만
+            wt, wbc = _week_total(week, entries, month)
+            if wt > 0:
+                wcell = f"**{_hhmm(wt)}**"
+                if wbc:
+                    wcell += f"<br><sub>부트 {wbc}h</sub>"
+            else:
+                wcell = "·"
+            cells.append(wcell)
             out.append("| " + " | ".join(cells) + " |")
+        out.append("")
+        out.append("</details>")
         out.append("")
     return "\n".join(out).rstrip()
 
@@ -172,7 +202,29 @@ def update_readme(cal):
     with open(README_PATH, "w", encoding="utf-8") as f:
         f.write(txt)
 
+def backfill():
+    # 5/12(기본)~오늘 범위를 한 번에 읽어 calendar.json·README에 합계만 채움.
+    # logs/ md나 과거 잔디는 안 건드림(표시 백필) — 수동 dispatch에서 1회 실행용.
+    start = os.environ.get("BACKFILL_START") or BACKFILL_START
+    end = datetime.datetime.now(KST).date().isoformat()
+    rows = fetch_range(start, end)
+    cal = load_calendar()
+    n = 0
+    for row in rows:
+        day = row.get("date")
+        data = row.get("data")
+        tm = total_minutes(data)
+        bc = bootcamp_hours(data)
+        if day and (tm > 0 or bc > 0):
+            cal[day] = {"total_min": tm, "bootcamp_h": bc}
+            n += 1
+    save_calendar(cal)
+    update_readme(cal)
+    print(f"Backfilled {n} days ({start} ~ {end}).")
+
 def main():
+    if os.environ.get("DATE_MODE") == "backfill":
+        backfill(); return
     day = target_date()
     posts = blog_posts(day)
     data = fetch_day(day)
