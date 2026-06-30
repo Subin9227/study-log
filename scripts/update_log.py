@@ -19,7 +19,7 @@ README_PATH = os.path.join(os.path.dirname(HERE), "README.md")
 CAL_START = "<!-- CAL:START -->"
 CAL_END = "<!-- CAL:END -->"
 
-DETAIL_FROM = "2026-06-25"     # 이 날짜부터 날짜칸에 시간 표시, 그 전은 숫자만(주간 합계엔 포함)
+DETAIL_FROM = "2026-05-12"     # 이 날짜부터 날짜칸에 시간 표시 (부트캠프 개강일)
 BACKFILL_START = "2026-05-12"  # 백필 기본 시작일(부트캠프 개강)
 
 def target_date():
