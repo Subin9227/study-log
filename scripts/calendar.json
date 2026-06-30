@@ -1,4 +1,148 @@
 {
+  "2026-05-12": {
+    "bootcamp_h": 9.2,
+    "total_min": 660
+  },
+  "2026-05-13": {
+    "bootcamp_h": 8.0,
+    "total_min": 560
+  },
+  "2026-05-16": {
+    "bootcamp_h": 8.0,
+    "total_min": 550
+  },
+  "2026-05-18": {
+    "bootcamp_h": 8.0,
+    "total_min": 490
+  },
+  "2026-05-19": {
+    "bootcamp_h": 12.0,
+    "total_min": 830
+  },
+  "2026-05-20": {
+    "bootcamp_h": 7.3,
+    "total_min": 760
+  },
+  "2026-05-21": {
+    "bootcamp_h": 6.3,
+    "total_min": 730
+  },
+  "2026-05-22": {
+    "bootcamp_h": 8.2,
+    "total_min": 580
+  },
+  "2026-05-23": {
+    "bootcamp_h": 2.8,
+    "total_min": 360
+  },
+  "2026-05-26": {
+    "bootcamp_h": 9.5,
+    "total_min": 610
+  },
+  "2026-05-27": {
+    "bootcamp_h": 12.0,
+    "total_min": 750
+  },
+  "2026-05-28": {
+    "bootcamp_h": 10.5,
+    "total_min": 680
+  },
+  "2026-05-29": {
+    "bootcamp_h": 7.7,
+    "total_min": 490
+  },
+  "2026-05-30": {
+    "bootcamp_h": 12.3,
+    "total_min": 750
+  },
+  "2026-05-31": {
+    "bootcamp_h": 0.0,
+    "total_min": 320
+  },
+  "2026-06-01": {
+    "bootcamp_h": 12.3,
+    "total_min": 790
+  },
+  "2026-06-02": {
+    "bootcamp_h": 6.8,
+    "total_min": 470
+  },
+  "2026-06-04": {
+    "bootcamp_h": 12.8,
+    "total_min": 780
+  },
+  "2026-06-05": {
+    "bootcamp_h": 11.2,
+    "total_min": 690
+  },
+  "2026-06-06": {
+    "bootcamp_h": 10.8,
+    "total_min": 660
+  },
+  "2026-06-08": {
+    "bootcamp_h": 12.8,
+    "total_min": 780
+  },
+  "2026-06-09": {
+    "bootcamp_h": 12.5,
+    "total_min": 770
+  },
+  "2026-06-10": {
+    "bootcamp_h": 10.7,
+    "total_min": 690
+  },
+  "2026-06-11": {
+    "bootcamp_h": 9.5,
+    "total_min": 710
+  },
+  "2026-06-12": {
+    "bootcamp_h": 9.5,
+    "total_min": 580
+  },
+  "2026-06-13": {
+    "bootcamp_h": 10.3,
+    "total_min": 680
+  },
+  "2026-06-15": {
+    "bootcamp_h": 11.8,
+    "total_min": 720
+  },
+  "2026-06-16": {
+    "bootcamp_h": 4.7,
+    "total_min": 670
+  },
+  "2026-06-17": {
+    "bootcamp_h": 7.8,
+    "total_min": 560
+  },
+  "2026-06-18": {
+    "bootcamp_h": 5.8,
+    "total_min": 530
+  },
+  "2026-06-19": {
+    "bootcamp_h": 9.5,
+    "total_min": 580
+  },
+  "2026-06-20": {
+    "bootcamp_h": 0.8,
+    "total_min": 180
+  },
+  "2026-06-21": {
+    "bootcamp_h": 9.2,
+    "total_min": 560
+  },
+  "2026-06-22": {
+    "bootcamp_h": 11.5,
+    "total_min": 880
+  },
+  "2026-06-23": {
+    "bootcamp_h": 10.2,
+    "total_min": 970
+  },
+  "2026-06-24": {
+    "bootcamp_h": 11.8,
+    "total_min": 770
+  },
   "2026-06-25": {
     "bootcamp_h": 11.3,
     "total_min": 710
@@ -18,5 +162,9 @@
   "2026-06-29": {
     "bootcamp_h": 9.3,
     "total_min": 570
+  },
+  "2026-06-30": {
+    "bootcamp_h": 8.8,
+    "total_min": 540
   }
 }
