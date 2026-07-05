@@ -168,9 +168,9 @@ def render_calendar(cal):
                     tm = entries[ds]["total_min"]
                     bc = entries[ds].get("bootcamp_h") or 0
                     if tm > 0:
-                        cell = f"**{d.day}**<br>{_emoji(tm)} {_hhmm(tm)}"
-                        if bc:
-                            cell += f"<br><sub>부트 {bc}h</sub>"
+                        # 부트캠프 안 한 날도 '부트 0h'로 명시
+                        cell = (f"**{d.day}**<br>{_emoji(tm)} {_hhmm(tm)}"
+                                f"<br><sub>부트 {bc if bc else 0}h</sub>")
                     else:
                         cell = f"**{d.day}**<br>✍️"   # 측정시간 0(블로그 등)
                     cells.append(cell)
@@ -178,9 +178,7 @@ def render_calendar(cal):
                     cells.append(str(d.day))   # 컷오프 이전 or 데이터 없음 → 숫자만
             wt, wbc = _week_total(week, entries, month)
             if wt > 0:
-                wcell = f"**{_hhmm(wt)}**"
-                if wbc:
-                    wcell += f"<br><sub>부트 {wbc}h</sub>"
+                wcell = f"**{_hhmm(wt)}**<br><sub>부트 {wbc if wbc else 0}h</sub>"
             else:
                 wcell = "·"
             cells.append(wcell)
