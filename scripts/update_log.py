@@ -63,7 +63,11 @@ def fetch_day(day):
             rows = json.loads(r.read())
     except Exception as e:
         print("supabase fetch failed:", e); return None
-    return rows[0].get("data") if rows else None
+    if not rows:
+        return None
+    # 같은 날짜에 행이 중복 생성될 수 있음(예: 빈 행 + 실제 행) → 슬롯 많은 행 선택
+    return max((row.get("data") or {} for row in rows),
+               key=lambda d: len((d or {}).get("slots") or {}))
 
 def fetch_range(start, end):
     # start~end(포함) 모든 날 한 번에 조회. 백필용.
@@ -209,15 +213,21 @@ def backfill():
     end = datetime.datetime.now(KST).date().isoformat()
     rows = fetch_range(start, end)
     cal = load_calendar()
-    n = 0
+    # 날짜별 최선의 행 선택(중복 행 대비: 공부시간 큰 쪽)
+    best = {}
     for row in rows:
         day = row.get("date")
         data = row.get("data")
         tm = total_minutes(data)
         bc = bootcamp_hours(data)
-        if day and (tm > 0 or bc > 0):
-            cal[day] = {"total_min": tm, "bootcamp_h": bc}
-            n += 1
+        if not day or (tm == 0 and bc == 0):
+            continue
+        if day not in best or tm > best[day][0]:
+            best[day] = (tm, bc)
+    n = 0
+    for day, (tm, bc) in best.items():
+        cal[day] = {"total_min": tm, "bootcamp_h": bc}
+        n += 1
     save_calendar(cal)
     update_readme(cal)
     print(f"Backfilled {n} days ({start} ~ {end}).")
