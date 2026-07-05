@@ -229,27 +229,35 @@ def main():
     posts = blog_posts(day)
     data = fetch_day(day)
     bc = bootcamp_hours(data)
-    if not (posts or bc >= BOOTCAMP_MIN_HOURS):
-        print(f"{day}: not studied (blog={len(posts)}, bootcamp={bc}h). Skip."); return
-    lines = [f"# {day}", ""]
-    if bc > 0:
-        lines += [f"- 부트캠프 {bc}시간", ""]
-    lines += task_lines(data)
-    if posts:
-        lines.append("## 블로그")
-        lines += [f"- [{p['title']}]({p['link']})" for p in posts]
-        lines.append("")
-    path = os.path.join("logs", f"{day:%Y}", f"{day:%m}", f"{day}.md")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
-    # 달력 갱신: 그날 칸에 전체시간 + 부트캠프 시간 기록 후 README 주입
     tm = total_minutes(data)
-    cal = load_calendar()
-    cal[str(day)] = {"total_min": tm, "bootcamp_h": bc}
-    save_calendar(cal)
-    update_readme(cal)
-    print(f"Wrote {path} (blog={len(posts)}, bootcamp={bc}h, total={_hhmm(tm)}).")
+
+    # ① md(logs/): 기존 엄격 기준 유지 — 블로그 있거나 부트캠프 2h 이상일 때만
+    if posts or bc >= BOOTCAMP_MIN_HOURS:
+        lines = [f"# {day}", ""]
+        if bc > 0:
+            lines += [f"- 부트캠프 {bc}시간", ""]
+        lines += task_lines(data)
+        if posts:
+            lines.append("## 블로그")
+            lines += [f"- [{p['title']}]({p['link']})" for p in posts]
+            lines.append("")
+        path = os.path.join("logs", f"{day:%Y}", f"{day:%m}", f"{day}.md")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+        print(f"Wrote {path} (blog={len(posts)}, bootcamp={bc}h).")
+    else:
+        print(f"{day}: md skip (blog={len(posts)}, bootcamp={bc}h).")
+
+    # ② 달력: 공부 시간이 있으면(부트캠프 0이어도) 무조건 기록
+    if posts or tm > 0:
+        cal = load_calendar()
+        cal[str(day)] = {"total_min": tm, "bootcamp_h": bc}
+        save_calendar(cal)
+        update_readme(cal)
+        print(f"Calendar {day}: total={_hhmm(tm)}, bootcamp={bc}h.")
+    else:
+        print(f"{day}: no study time, calendar unchanged.")
 
 if __name__ == "__main__":
     main()
